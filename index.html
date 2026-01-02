@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trend Radar - AI Content Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#0b0f19', // Deep background
+                        },
+                        neon: {
+                            blue: '#00f3ff',
+                            purple: '#bc13fe',
+                            green: '#0aff0a'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon-blue': '0 0 5px #00f3ff, 0 0 10px #00f3ff',
+                        'neon-purple': '0 0 5px #bc13fe, 0 0 10px #bc13fe',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            background-color: #050505;
+            color: #e5e7eb;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563; 
+        }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .trend-card {
+            transition: all 0.3s ease;
+        }
+        .trend-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 243, 255, 0.15);
+            border-color: rgba(0, 243, 255, 0.3);
+        }
+
+        .animate-pulse-fast {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden font-sans selection:bg-neon-blue selection:text-black">
+
+    <!-- Header -->
+    <header class="h-16 border-b border-gray-800 flex items-center justify-between px-6 bg-gray-950 z-20">
+        <div class="flex items-center gap-2">
+            <!-- Icon Removed as requested -->
+            <h1 class="text-xl font-bold tracking-tight text-white">TREND <span class="text-neon-blue">RADAR</span> <span class="text-[10px] text-gray-500 ml-1">v2.0</span></h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="relative group">
+                <button class="p-2 text-gray-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+                <!-- Settings Dropdown (Mock) -->
+                <div class="absolute right-0 mt-2 w-64 bg-gray-900 border border-gray-700 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50 p-4">
+                    <label class="block text-xs text-gray-400 mb-1">OpenAI API Key (Optional)</label>
+                    <input type="password" placeholder="sk-..." class="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:border-neon-blue outline-none">
+                </div>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-gray-700 border border-gray-600"></div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Sidebar: Filters -->
+        <aside class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col p-4 gap-6 z-10">
+            
+            <!-- Niche Filter -->
+            <div>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Niche</h3>
+                <div class="space-y-1" id="niche-filters">
+                    <button onclick="setNiche('All')" class="w-full text-left px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white border-l-2 border-neon-blue transition-all" data-niche="All">
+                        All Niches
+                    </button>
+                    <button onclick="setNiche('Fitness')" class="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all" data-niche="Fitness">
+                        Fitness
+                    </button>
+                    <button onclick="setNiche('Tech')" class="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all" data-niche="Tech">
+                        Tech & AI
+                    </button>
+                    <button onclick="setNiche('Business')" class="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all" data-niche="Business">
+                        Business
+                    </button>
+                </div>
+            </div>
+
+            <!-- Time Range Filter -->
+            <div>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Time Range</h3>
+                <div class="grid grid-cols-3 gap-2 bg-gray-800 p-1 rounded-lg">
+                    <button onclick="setTimeRange('12h')" class="text-xs py-1.5 rounded text-center font-medium bg-gray-700 text-white shadow-sm transition-all" data-time="12h">12h</button>
+                    <button onclick="setTimeRange('24h')" class="text-xs py-1.5 rounded text-center font-medium text-gray-400 hover:text-white transition-all" data-time="24h">24h</button>
+                    <button onclick="setTimeRange('7d')" class="text-xs py-1.5 rounded text-center font-medium text-gray-400 hover:text-white transition-all" data-time="7d">7d</button>
+                </div>
+            </div>
+
+            <!-- Stats Widget -->
+            <div class="mt-auto bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border border-gray-700">
+                <div class="text-xs text-gray-400 mb-1">System Status</div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-neon-green animate-pulse"></span>
+                    <span class="text-sm font-bold text-white">Live Tracking</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500">Scanning 14,203 sources...</div>
+            </div>
+        </aside>
+
+        <!-- Main Area: Trend Radar -->
+        <main class="flex-1 flex flex-col min-w-0 bg-gray-950 relative">
+            <!-- Background Grid Effect -->
+            <div class="absolute inset-0 opacity-10 pointer-events-none" 
+                 style="background-image: radial-gradient(#374151 1px, transparent 1px); background-size: 24px 24px;">
+            </div>
+
+            <div class="p-6 pb-0 z-10">
+                <h2 class="text-2xl font-bold text-white mb-1">Trend Radar</h2>
+                <p class="text-sm text-gray-400">Real-time viral opportunities detected by AI.</p>
+            </div>
+
+            <div class="p-6 overflow-y-auto z-10 custom-scrollbar h-full">
+                <div id="trend-grid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 pb-20">
+                    <!-- Cards will be injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Script Area: Output Panel -->
+        <aside class="w-96 bg-gray-900 border-l border-gray-800 flex flex-col z-20 shadow-2xl">
+            <div class="p-4 border-b border-gray-800 bg-gray-900">
+                <h3 class="font-bold text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Content Lab
+                </h3>
+            </div>
+
+            <div id="script-content" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Empty State -->
+                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center text-gray-500 opacity-60">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p class="text-sm">Select a trend to generate<br>viral scripts and insights.</p>
+                </div>
+
+                <!-- Active Content (Hidden by default) -->
+                <div id="active-content" class="hidden space-y-6">
+                    
+                    <!-- Selected Trend Info -->
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="text-xs text-neon-blue font-bold uppercase mb-1" id="detail-niche">FITNESS</div>
+                        <h2 class="text-lg font-bold text-white leading-tight mb-2" id="detail-title">Trend Title</h2>
+                        <div class="flex items-center gap-3 text-xs text-gray-400">
+                            <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span id="detail-age">12h</span></span>
+                            <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3-2zm0 0v-8"></path></svg> <span id="detail-audio">Audio Name</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Prompts Section -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-neon-purple"></span> Prompted Prompts
+                        </h4>
+                        <div class="space-y-2" id="prompts-container">
+                            <!-- Prompts injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button id="generate-btn" class="w-full py-3 bg-gradient-to-r from-neon-blue to-blue-600 hover:from-blue-400 hover:to-blue-500 text-black font-bold rounded-lg shadow-lg shadow-blue-900/50 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generate Viral Script
+                    </button>
+
+                    <!-- Script Output -->
+                    <div id="script-output" class="hidden animate-fade-in flex flex-col">
+                        
+                        <!-- Tabs -->
+                        <div class="flex border-b border-gray-800 mb-4">
+                            <button onclick="switchTab('video')" id="tab-video" class="flex-1 pb-2 text-sm font-medium text-neon-blue border-b-2 border-neon-blue transition-colors">Video Script</button>
+                            <button onclick="switchTab('repurpose')" id="tab-repurpose" class="flex-1 pb-2 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">Repurpose</button>
+                        </div>
+
+                        <!-- Video Tab Content -->
+                        <div id="content-video" class="space-y-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <h4 class="text-sm font-semibold text-white">Generated Script</h4>
+                                <span class="text-xs text-gray-500">60s Vertical Video</span>
+                            </div>
+                            <div class="bg-gray-800 rounded border border-gray-700 overflow-hidden text-xs">
+                                <div class="grid grid-cols-2 bg-gray-700 text-gray-300 font-semibold border-b border-gray-600">
+                                    <div class="p-2 border-r border-gray-600">Visual</div>
+                                    <div class="p-2">Audio / Speech</div>
+                                </div>
+                                <div id="script-table-body" class="divide-y divide-gray-700 text-gray-300">
+                                    <!-- Script rows injected here -->
+                                </div>
+                            </div>
+                            <div class="mt-2 flex justify-end gap-2">
+                                <button class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copy Script
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Repurpose Tab Content -->
+                        <div id="content-repurpose" class="hidden space-y-4">
+                            <!-- LinkedIn -->
+                            <div class="bg-gray-800 rounded border border-gray-700 p-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-blue-400 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                                        LinkedIn Post
+                                    </span>
+                                    <button class="text-[10px] text-gray-400 hover:text-white">Copy</button>
+                                </div>
+                                <p class="text-xs text-gray-300 whitespace-pre-line leading-relaxed" id="linkedin-content">...</p>
+                            </div>
+                            <!-- Twitter -->
+                            <div class="bg-gray-800 rounded border border-gray-700 p-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-sky-400 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+                                        X Thread
+                                    </span>
+                                    <button class="text-[10px] text-gray-400 hover:text-white">Copy</button>
+                                </div>
+                                <div class="space-y-2 text-xs text-gray-300" id="twitter-content">...</div>
+                            </div>
+                             <!-- YouTube -->
+                            <div class="bg-gray-800 rounded border border-gray-700 p-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-red-400 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                                        YouTube Desc.
+                                    </span>
+                                    <button class="text-[10px] text-gray-400 hover:text-white">Copy</button>
+                                </div>
+                                <p class="text-xs text-gray-300 whitespace-pre-line leading-relaxed" id="youtube-content">...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- Mock Data ---
+        const trends = [
+            {
+                id: 1,
+                niche: 'Fitness',
+                title: 'The "3-2-1" Method',
+                score: 98,
+                age: '6h',
+                audio: 'Phonk Drift (Slowed)',
+                description: 'A new interval running technique taking over TikTok. 3 mins run, 2 mins jog, 1 min sprint.',
+                prompts: [
+                    "Create a 3-2-1 routine for beginners",
+                    "Explain the science behind 3-2-1 intervals",
+                    "Hook ideas for a 'Stop Running Wrong' video"
+                ]
+            },
+            {
+                id: 2,
+                niche: 'Fitness',
+                title: 'Monk Mode Morning',
+                score: 92,
+                age: '18h',
+                audio: 'Ambient Focus',
+                description: 'Influencers are ditching phones for the first 2 hours of the day. High engagement on "Day in the life" vlogs.',
+                prompts: [
+                    "My 5am Monk Mode routine script",
+                    "Benefits of no-phone mornings",
+                    "Challenge your audience to try Monk Mode"
+                ]
+            },
+            {
+                id: 3,
+                niche: 'Tech',
+                title: 'AI Video is Getting Scary',
+                score: 99,
+                age: '2h',
+                audio: 'Blade Runner Synth',
+                description: 'New Sora/Runway updates are indistinguishable from reality. Reaction videos are trending hard.',
+                prompts: [
+                    "React to the latest AI video clips",
+                    "Is Hollywood dead? Debate script",
+                    "Tutorial: How to spot AI video"
+                ]
+            },
+            {
+                id: 4,
+                niche: 'Tech',
+                title: 'Rabbit R1 vs Humane Pin',
+                score: 85,
+                age: '2d',
+                audio: 'Tech Review Beat',
+                description: 'The battle of the AI gadgets. Comparison videos and "Why I returned it" videos are hot.',
+                prompts: [
+                    "Honest review of Rabbit R1",
+                    "Why AI hardware is failing",
+                    "The future of smartphones vs pins"
+                ]
+            },
+            {
+                id: 5,
+                niche: 'Business',
+                title: 'Faceless YouTube Automation',
+                score: 94,
+                age: '10h',
+                audio: 'Money Counter ASMR',
+                description: 'Resurgence of interest in faceless channels using new AI voice tools.',
+                prompts: [
+                    "Step-by-step guide to faceless channels",
+                    "Best niches for 2026 automation",
+                    "Income reveal script template"
+                ]
+            },
+            {
+                id: 6,
+                niche: 'Business',
+                title: 'Micro-SaaS for Non-Coders',
+                score: 88,
+                age: '3d',
+                audio: 'Lo-Fi Coding',
+                description: 'Building small software tools using Bubble/FlutterFlow. "How I built this in weekend" format.',
+                prompts: [
+                    "No-code tools tier list",
+                    "Idea to MVP in 48 hours challenge",
+                    "How to monetize a simple tool"
+                ]
+            }
+        ];
+
+        // --- State ---
+        let state = {
+            niche: 'All',
+            timeRange: '24h',
+            selectedTrendId: null
+        };
+
+        // --- DOM Elements ---
+        const gridEl = document.getElementById('trend-grid');
+        const nicheFiltersEl = document.getElementById('niche-filters');
+        const emptyStateEl = document.getElementById('empty-state');
+        const activeContentEl = document.getElementById('active-content');
+        
+        // Detail Elements
+        const detailNicheEl = document.getElementById('detail-niche');
+        const detailTitleEl = document.getElementById('detail-title');
+        const detailAgeEl = document.getElementById('detail-age');
+        const detailAudioEl = document.getElementById('detail-audio');
+        const promptsContainerEl = document.getElementById('prompts-container');
+        const generateBtnEl = document.getElementById('generate-btn');
+        const scriptOutputEl = document.getElementById('script-output');
+        const scriptTableBodyEl = document.getElementById('script-table-body');
+
+        // --- Functions ---
+
+        function init() {
+            renderTrends();
+        }
+
+        function setNiche(niche) {
+            state.niche = niche;
+            updateFilterUI();
+            renderTrends();
+        }
+
+        function setTimeRange(range) {
+            state.timeRange = range;
+            // Update UI for time buttons
+            document.querySelectorAll('[data-time]').forEach(btn => {
+                if(btn.dataset.time === range) {
+                    btn.classList.remove('text-gray-400', 'hover:text-white');
+                    btn.classList.add('bg-gray-700', 'text-white', 'shadow-sm');
+                } else {
+                    btn.classList.add('text-gray-400', 'hover:text-white');
+                    btn.classList.remove('bg-gray-700', 'text-white', 'shadow-sm');
+                }
+            });
+            // In a real app, we would filter by time here too
+            renderTrends();
+        }
+
+        function updateFilterUI() {
+            const buttons = nicheFiltersEl.querySelectorAll('button');
+            buttons.forEach(btn => {
+                if (btn.dataset.niche === state.niche) {
+                    btn.className = "w-full text-left px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white border-l-2 border-neon-blue transition-all";
+                } else {
+                    btn.className = "w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all";
+                }
+            });
+        }
+
+        function renderTrends() {
+            gridEl.innerHTML = '';
+            
+            const filtered = trends.filter(t => state.niche === 'All' || t.niche === state.niche);
+
+            filtered.forEach(trend => {
+                const isNew = trend.age.includes('h') && parseInt(trend.age) < 24;
+                
+                const card = document.createElement('div');
+                card.className = `trend-card bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer relative overflow-hidden group ${state.selectedTrendId === trend.id ? 'ring-1 ring-neon-blue bg-gray-800' : ''}`;
+                card.onclick = () => selectTrend(trend);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-800 text-gray-300 border border-gray-700 group-hover:border-gray-600">${trend.niche}</span>
+                        ${isNew ? `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-blue/10 text-neon-blue border border-neon-blue/20 animate-pulse">Forecasting</span>` : ''}
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-neon-blue transition-colors">${trend.title}</h3>
+                    <p class="text-sm text-gray-400 mb-3 line-clamp-2">${trend.description}</p>
+                    
+                    <div class="flex items-center gap-2 mb-4 text-xs text-gray-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3-2zm0 0v-8"></path></svg>
+                        <span class="truncate">${trend.audio}</span>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-800">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-gray-500 uppercase">Potential</span>
+                            <span class="text-lg font-bold text-neon-green">${trend.score}%</span>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[10px] text-gray-500 uppercase">Age</span>
+                            <span class="text-sm font-medium text-white">${trend.age}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Hover Glow Effect -->
+                    <div class="absolute -inset-1 bg-gradient-to-r from-neon-blue to-neon-purple opacity-0 group-hover:opacity-10 blur transition duration-500 -z-10"></div>
+                `;
+                gridEl.appendChild(card);
+            });
+        }
+
+        function selectTrend(trend) {
+            state.selectedTrendId = trend.id;
+            renderTrends(); // Re-render to update active state styling
+
+            // Update Detail View
+            emptyStateEl.classList.add('hidden');
+            activeContentEl.classList.remove('hidden');
+            scriptOutputEl.classList.add('hidden'); // Hide previous script
+
+            detailNicheEl.textContent = trend.niche;
+            detailTitleEl.textContent = trend.title;
+            detailAgeEl.textContent = trend.age + ' ago';
+            detailAudioEl.textContent = trend.audio;
+
+            // Render Prompts
+            promptsContainerEl.innerHTML = '';
+            trend.prompts.forEach(prompt => {
+                const pBtn = document.createElement('button');
+                pBtn.className = "w-full text-left p-3 rounded bg-gray-800 border border-gray-700 hover:border-neon-purple/50 hover:bg-gray-750 text-xs text-gray-300 transition-all";
+                pBtn.textContent = prompt;
+                pBtn.onclick = () => {
+                    // Visual feedback for selection
+                    document.querySelectorAll('#prompts-container button').forEach(b => b.classList.remove('border-neon-purple', 'text-white'));
+                    pBtn.classList.add('border-neon-purple', 'text-white');
+                };
+                promptsContainerEl.appendChild(pBtn);
+            });
+
+            // Reset Generate Button
+            generateBtnEl.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Generate Viral Script
+            `;
+            generateBtnEl.disabled = false;
+            generateBtnEl.onclick = () => generateScript(trend);
+        }
+
+        function generateScript(trend) {
+            // Loading State
+            generateBtnEl.disabled = true;
+            generateBtnEl.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+            `;
+
+            // Simulate API Delay
+            setTimeout(() => {
+                generateBtnEl.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Script Generated
+                `;
+                generateBtnEl.disabled = false;
+                
+                renderScript(trend);
+            }, 1500);
+        }
+
+        function switchTab(tab) {
+            const videoTab = document.getElementById('tab-video');
+            const repurposeTab = document.getElementById('tab-repurpose');
+            const videoContent = document.getElementById('content-video');
+            const repurposeContent = document.getElementById('content-repurpose');
+
+            if (tab === 'video') {
+                videoTab.className = "flex-1 pb-2 text-sm font-medium text-neon-blue border-b-2 border-neon-blue transition-colors";
+                repurposeTab.className = "flex-1 pb-2 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors";
+                videoContent.classList.remove('hidden');
+                repurposeContent.classList.add('hidden');
+            } else {
+                videoTab.className = "flex-1 pb-2 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors";
+                repurposeTab.className = "flex-1 pb-2 text-sm font-medium text-neon-purple border-b-2 border-neon-purple transition-colors";
+                videoContent.classList.add('hidden');
+                repurposeContent.classList.remove('hidden');
+            }
+        }
+
+        function renderScript(trend) {
+            scriptOutputEl.classList.remove('hidden');
+            
+            // Mock Script Data based on trend
+            const scriptData = [
+                { visual: "Split screen: You looking shocked + Screenshot of news article", audio: "(Hook) Stop scrolling. If you're in " + trend.niche + ", everything just changed." },
+                { visual: "Fast montage of " + trend.title + " examples/gameplay", audio: "This is '" + trend.title + "' and it's blowing up right now." },
+                { visual: "Text overlay: 'The Secret'", audio: "Most people are doing it wrong. Here's the hack..." },
+                { visual: "You talking to camera, pointing at green screen stats", audio: "Data shows engagement is up " + trend.score + "% when you use this specific method." },
+                { visual: "Call to Action text on screen", audio: "Try it before it gets saturated. Follow for more " + trend.niche + " alpha." }
+            ];
+
+            scriptTableBodyEl.innerHTML = '';
+            scriptData.forEach(row => {
+                const tr = document.createElement('div');
+                tr.className = "grid grid-cols-2 border-b border-gray-700 last:border-0";
+                tr.innerHTML = `
+                    <div class="p-2 border-r border-gray-700">${row.visual}</div>
+                    <div class="p-2 text-white">${row.audio}</div>
+                `;
+                scriptTableBodyEl.appendChild(tr);
+            });
+
+            // --- Generate Repurpose Content ---
+            
+            // LinkedIn
+            const linkedinText = `🚀 ${trend.title} is changing the game in ${trend.niche}.\n\nI've been tracking the data, and the engagement metrics are off the charts (${trend.score}% potential score).\n\nWhy is this happening now?\n1. Market saturation of old methods.\n2. The rise of new AI tools.\n\nIf you aren't paying attention to this, you're falling behind.\n\n#${trend.niche.replace(/\s/g, '')} #Trends #Innovation`;
+            document.getElementById('linkedin-content').textContent = linkedinText;
+
+            // Twitter/X
+            const twitterThread = [
+                `1/5 ${trend.title} is blowing up right now. 🧵\n\nHere is why you need to care if you are in ${trend.niche}:`,
+                `2/5 The data doesn't lie. We are seeing a ${trend.score}% spike in engagement over the last ${trend.age}.`,
+                `3/5 The secret sauce? It's all about timing. Early adopters are seeing massive ROI.`,
+                `4/5 How to leverage this: \n- Don't overthink it\n- Use the tools available\n- Post consistently`,
+                `5/5 Want more insights like this? Follow for daily ${trend.niche} alpha.`
+            ];
+            const twitterContainer = document.getElementById('twitter-content');
+            twitterContainer.innerHTML = '';
+            twitterThread.forEach(tweet => {
+                const p = document.createElement('p');
+                p.className = "p-2 bg-gray-900 rounded border border-gray-800 mb-2 last:mb-0";
+                p.textContent = tweet;
+                twitterContainer.appendChild(p);
+            });
+
+            // YouTube
+            const youtubeDesc = `In this video, we break down ${trend.title} and why it is taking over the ${trend.niche} world.\n\nTIMESTAMPS:\n0:00 - Intro\n1:30 - The Data\n3:45 - How to execute\n\n#${trend.niche} #${trend.title.replace(/\s/g, '')} #Viral`;
+            document.getElementById('youtube-content').textContent = youtubeDesc;
+            
+            // Reset to video tab
+            switchTab('video');
+
+            // Scroll to bottom of container
+            const container = document.getElementById('script-content');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Initialize
+        init();
+
+    </script>
+</body>
+</html>
